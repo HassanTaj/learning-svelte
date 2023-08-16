@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Todo } from '$lib/models/todo.model';
-	import { elasticIn } from 'svelte/easing';
 	import moment from 'moment';
-	import { DateTime } from 'luxon';
+	import { onMount } from 'svelte';
 
 	var todos: Todo[] = [];
 	var model: Todo = new Todo();
 	const endpoint = 'http://localhost:3000/todos';
+	const headers = {
+		'Content-Type': 'application/json'
+	};
 
 	async function getTodos() {
 		const response = await fetch(endpoint);
@@ -22,6 +23,14 @@
 	}
 	let getTodosPromise = getTodos();
 
+	async function onSave() {
+		if (!!model.id) {
+			await putTodo();
+		} else {
+			await postTodo();
+		}
+	}
+
 	async function postTodo() {
 		model.startDate = new Date();
 		model.endDate = undefined;
@@ -30,28 +39,40 @@
 		const response = await fetch(endpoint, {
 			method: 'POST',
 			body: JSON.stringify(model),
-			headers: {
-				'Content-Type': 'application/json'
-			}
+			headers: headers
 		});
 		const data = await response.json();
 		console.log(data);
 		model = new Todo();
 		getTodosPromise = getTodos();
 	}
+
+	async function putTodo() {
+		const response = await fetch(`${endpoint}/${model.id}`, {
+			method: 'Put',
+			body: JSON.stringify(model),
+			headers: headers
+		});
+		const data = await response.json();
+		console.log(data);
+		model = new Todo();
+		getTodosPromise = getTodos();
+	}
+
 	async function deleteTodo(todo: Todo) {
 		const response = await fetch(`${endpoint}/${todo.id}`, {
 			method: 'DELETE',
 			body: JSON.stringify(todo),
-			headers: {
-				'Content-Type': 'application/json'
-			}
+			headers: headers
 		});
 		const data = await response.json();
 		console.log(data);
 		getTodosPromise = getTodos();
 	}
 
+	async function editTodo(todo: Todo) {
+		model = todo;
+	}
 	// kind of on init
 	onMount(getTodos);
 </script>
@@ -69,16 +90,13 @@
 					aria-describedby=""
 					bind:value={model.task}
 					on:keydown={async (e) => {
-						debugger;
-						const input = e.currentTarget;
-						const task = input.value;
+						const task = e.currentTarget.value;
 						if (e.key == 'Enter' && !!task && task != '') {
-							await postTodo();
+							await onSave();
 						}
 					}}
 				/>
-				<button class="btn btn-outline-secondary" type="button" id="" on:click={postTodo}
-					>Add</button
+				<button class="btn btn-outline-secondary" type="button" id="" on:click={onSave}>Save</button
 				>
 			</div>
 
@@ -103,11 +121,14 @@
 									<td>{todo.task}</td>
 									<td>{moment(todo.startDate).format('DD MM YYYY')}</td>
 									<td>{!!todo.endDate ? moment(todo.endDate).format('DD MM YYYY') : 'not set'}</td>
-									<td
-										><button class="btn btn-sm btn-danger" on:click={() => deleteTodo(todo)}>
+									<td>
+										<button class="btn btn-sm btn-danger" on:click={async (e) => deleteTodo(todo)}>
 											<i class="fa fa-trash" />
-										</button></td
-									>
+										</button>
+										<button class="btn btn-sm btn-primary" on:click={async (e) => editTodo(todo)}>
+											<i class="fa fa-pencil" />
+										</button>
+									</td>
 								</tr>
 							{/each}
 						{:catch error}

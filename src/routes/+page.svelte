@@ -18,3 +18,8 @@
 		<p class="card-text">{Home.Welcome}</p>
 	</div>
 </div>
+
+<div class="flex shadow-neutral-500 text-green-200 p-4 border-2 bg-slate-500 rounded my-3">
+	<p class="font-bold"> WTF IS THIS</p>
+</div>
+
